@@ -13,11 +13,12 @@ const products = [
 // GET /api/products/[id] - Get single product
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // ✅ Fixed: params is Promise
 ) {
   try {
-    const id = parseInt(params.id)
-    const product = products.find(p => p.id === id)
+    const { id } = await params  // ✅ Fixed: await params
+    const productId = parseInt(id)
+    const product = products.find(p => p.id === productId)
 
     if (!product) {
       return NextResponse.json(
@@ -38,16 +39,16 @@ export async function GET(
 // PUT /api/products/[id] - Update product
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // ✅ Fixed: params is Promise
 ) {
   try {
-    const id = parseInt(params.id)
+    const { id } = await params  // ✅ Fixed: await params
+    const productId = parseInt(id)
     const body = await request.json()
     
-    // In real app, update database
     return NextResponse.json({ 
       success: true, 
-      message: `Product ${id} updated` 
+      message: `Product ${productId} updated` 
     })
   } catch {
     return NextResponse.json(
@@ -60,15 +61,15 @@ export async function PUT(
 // DELETE /api/products/[id] - Delete product
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // ✅ Fixed: params is Promise
 ) {
   try {
-    const id = parseInt(params.id)
+    const { id } = await params  // ✅ Fixed: await params
+    const productId = parseInt(id)
     
-    // In real app, delete from database
     return NextResponse.json({ 
       success: true, 
-      message: `Product ${id} deleted` 
+      message: `Product ${productId} deleted` 
     })
   } catch {
     return NextResponse.json(
