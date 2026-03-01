@@ -1,7 +1,22 @@
 import { NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+
+// Types
+interface Product {
+  id: number
+  name: string
+  price: number
+  category: string
+  image: string
+  inStock: boolean
+}
+
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
 
 // Mock products data
-const products = [
+const products: Product[] = [
   { id: 1, name: 'Ruby Stone', price: 299, category: 'precious', image: '/n1.jpeg', inStock: true },
   { id: 2, name: 'Sapphire', price: 399, category: 'precious', image: '/n2.jpeg', inStock: true },
   { id: 3, name: 'Emerald', price: 499, category: 'precious', image: '/n3.jpeg', inStock: true },
@@ -10,21 +25,42 @@ const products = [
   { id: 6, name: 'Rose Quartz', price: 89, category: 'crystals', image: '/n6.jpeg', inStock: true },
 ]
 
-// GET /api/products/[id] - Get single product
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// Helper function to validate ID
+async function validateProductId(params: Promise<{ id: string }>): Promise<{ productId: number; error: NextResponse | null }> {
   try {
     const { id } = await params
     const productId = parseInt(id)
     
     if (isNaN(productId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid product ID' },
+      return { 
+        productId: NaN, 
+        error: NextResponse.json(
+          { success: false, error: 'Invalid product ID' },
+          { status: 400 }
+        )
+      }
+    }
+    
+    return { productId, error: null }
+  } catch {
+    return { 
+      productId: NaN, 
+      error: NextResponse.json(
+        { success: false, error: 'Invalid params' },
         { status: 400 }
       )
     }
+  }
+}
+
+// GET /api/products/[id] - Get single product
+export async function GET(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  try {
+    const { productId, error } = await validateProductId(params)
+    if (error) return error
 
     const product = products.find(p => p.id === productId)
 
@@ -52,19 +88,12 @@ export async function GET(
 
 // PUT /api/products/[id] - Update product
 export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  { params }: RouteParams
 ) {
   try {
-    const { id } = await params
-    const productId = parseInt(id)
-    
-    if (isNaN(productId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid product ID' },
-        { status: 400 }
-      )
-    }
+    const { productId, error } = await validateProductId(params)
+    if (error) return error
 
     const body = await request.json()
     
@@ -87,10 +116,11 @@ export async function PUT(
     }
 
     // Update product (in real app, update database)
-    const updatedProduct = {
+    const updatedProduct: Product = {
       ...products[productIndex],
       ...body,
-      id: productId
+      id: productId,
+      price: body.price ? Number(body.price) : products[productIndex].price
     }
 
     return NextResponse.json({ 
@@ -111,19 +141,12 @@ export async function PUT(
 
 // DELETE /api/products/[id] - Delete product
 export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  { params }: RouteParams
 ) {
   try {
-    const { id } = await params
-    const productId = parseInt(id)
-    
-    if (isNaN(productId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid product ID' },
-        { status: 400 }
-      )
-    }
+    const { productId, error } = await validateProductId(params)
+    if (error) return error
 
     // Find product
     const product = products.find(p => p.id === productId)
@@ -153,19 +176,12 @@ export async function DELETE(
 
 // PATCH /api/products/[id] - Partially update product
 export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  { params }: RouteParams
 ) {
   try {
-    const { id } = await params
-    const productId = parseInt(id)
-    
-    if (isNaN(productId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid product ID' },
-        { status: 400 }
-      )
-    }
+    const { productId, error } = await validateProductId(params)
+    if (error) return error
 
     const body = await request.json()
     
@@ -180,10 +196,11 @@ export async function PATCH(
     }
 
     // Partially update product
-    const updatedProduct = {
+    const updatedProduct: Product = {
       ...products[productIndex],
       ...body,
-      id: productId
+      id: productId,
+      price: body.price ? Number(body.price) : products[productIndex].price
     }
 
     return NextResponse.json({ 
@@ -204,16 +221,12 @@ export async function PATCH(
 
 // HEAD /api/products/[id] - Check if product exists
 export async function HEAD(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  { params }: RouteParams
 ) {
   try {
-    const { id } = await params
-    const productId = parseInt(id)
-    
-    if (isNaN(productId)) {
-      return new NextResponse(null, { status: 400 })
-    }
+    const { productId, error } = await validateProductId(params)
+    if (error) return new NextResponse(null, { status: 400 })
 
     const product = products.find(p => p.id === productId)
 
@@ -231,5 +244,9 @@ export async function HEAD(
 export async function OPTIONS() {
   return NextResponse.json({
     methods: ['GET', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+  }, {
+    headers: {
+      'Allow': 'GET, PUT, PATCH, DELETE, HEAD, OPTIONS'
+    }
   })
 }
